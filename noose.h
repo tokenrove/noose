@@ -23,11 +23,12 @@ extern void nntp_disconnect(void *);
 extern int nntp_cmd_group(void *, char *, int *, int *, int *);
 extern int nntp_cmd_article(void *, int, char **, char **);
 
-extern int newsrc_filter(char *rcfile, char *group, rangelist_t **rl);
+extern int newsrc_filter(char *, char *, rangelist_t **);
+extern int newsrc_getsubscribedgroups(char *, int *, char ***);
 
-extern rangelist_t *rl_new(int begin, int end, rangelist_t *next);
-extern void rl_delete(rangelist_t *rl);
-extern void rl_exclude(rangelist_t **rl, int begin, int end);
+extern rangelist_t *rl_new(int, int, rangelist_t *);
+extern void rl_delete(rangelist_t *);
+extern void rl_exclude(rangelist_t **, int, int);
 
 #endif
 
