@@ -99,7 +99,7 @@ void do_check(void *nh, char *group)
     narticles = 0;
     p = rl;
     while(p != NULL) {
-        for(i = p->begin; i <= p->end; i++) {
+        for(i = p->begin; i > 0 && i <= p->end; i++) {
             if(nntp_cmd_article(nh, i, NULL, NULL) == 0) {
                 narticles++;
             }
