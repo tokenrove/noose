@@ -15,7 +15,7 @@ noose: $(NOOSEOBJS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 install:
-	install -m 755 /usr/local/bin
+	install -s -m 755 noose /usr/local/bin
 
 clean:
 	rm -f *~ *.o
