@@ -1,7 +1,7 @@
 /* 
  * noose.h
  * Created: Sun Feb 25 22:13:41 2001 by tek@wiw.org
- * Revised: Sun Feb 25 22:13:41 2001 (pending)
+ * Revised: Sun Apr 22 17:54:59 2001 by tek@wiw.org
  * Copyright 2001 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
@@ -11,7 +11,8 @@
 #ifndef NOOSE_H
 #define NOOSE_H
 
-#define PROGNAME "noose"
+#define PROGNAME      "noose"
+#define DEFNNTPSERVER "news"
 
 typedef struct rangelist_s {
     int begin, end;

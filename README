@@ -1,0 +1,38 @@
+
+noose alpha-zero release notes
+
+Please read the LICENSE file, it isn't very complicated.
+
+The noose utility is a command-line tool which can check for new posts
+on a news server, via NNTP, in the groups to which one is subscribed, or
+read articles by article-number.
+
+It was written so I could find out how many unread posts were in some
+local usenet groups when I logged in, so I have no idea whether it
+will cope well with a large volume of groups or not.
+
+Compilation and installation should be as simple as ``make noose install''.
+Installation destination can be changed by editing ``Makefile''.
+If the compile fails on your favorite platform, email me about it.
+
+I've compiled and used noose on a number of platforms, including:
+OpenBSD/x86, OpenBSD/sparc, Debian Linux/x86, Debian Linux/axp.
+I guess it would be of some amusement to me if one emailed me
+telling me that one has successfully compiled and used it on
+another platform.
+
+There are a number of enhancements I had planned for it, mostly
+implementing additional NNTP commands (to make it more like an
+NNTP swiss army knife). However, my use for noose has now gone, (the
+local usenet groups have been eliminated), so I don't expect to
+be adding many features to it. If you use it and would like an
+enhancement, and don't feel comfortable doing it yourself, feel
+free to contact me via email.
+
+If you're submitting patches or want to take over maintenance,
+you should keep in mind that I want to keep noose as simple as
+possible, but by all means contact me. I am also interested in
+hearing about any enhancements made by others.
+
+	Julian Squires <tek@wiw.org>
+	April 22nd, 2001

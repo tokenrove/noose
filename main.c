@@ -1,7 +1,7 @@
 /* 
  * main.c
  * Created: Sun Feb 25 20:11:31 2001 by tek@wiw.org
- * Revised: Sun Feb 25 20:11:31 2001 (pending)
+ * Revised: Sun Apr 22 19:09:44 2001 by tek@wiw.org
  * Copyright 2001 Julian E. C. Squires (tek@wiw.org)
  * This program comes with ABSOLUTELY NO WARRANTY.
  * $Id$
@@ -17,21 +17,25 @@
 typedef struct noose_s {
     int verbose;
     void *nh;
+    char *newsrc;
 } noose_t;
 
 void usage(char *msg);
-int do_check(noose_t ndat, char *group);
-int checksingle(noose_t ndat, char *newsrc, char *group);
-int do_read(noose_t ndat, char *group, int article);
+int do_check(noose_t *ndat, char *group);
+int checksingle(noose_t *ndat, char *group);
+int do_read(noose_t *ndat, char *group, int article);
+int setnewsrc(noose_t *ndat);
 
 int main(int argc, char **argv)
 {
-    int i, j, article, ret;
-    enum { nocommand, check, list, read } command = nocommand;
+    enum { nocommand, check, read } command = nocommand;
     char *group, *server;
     noose_t ndat;
+    int i, j, article, ret;
 
     ndat.verbose = 1;
+    ndat.newsrc = NULL;
+    server = getenv("NNTPSERVER");
 
     for(i = 1; i < argc; i++) {
         if(argv[i][0] == '-') {
@@ -45,6 +49,21 @@ int main(int argc, char **argv)
                     ndat.verbose++;
                     break;
 
+                case 'n':
+                    i++;
+                    if(i == argc)
+                        usage("Option `n' requires an argument.");
+                    server = argv[i];
+                    break;
+
+                case 'r':
+                    i++;
+                    if(i == argc)
+                        usage("Option `r' requires an argument.");
+                    ndat.newsrc = malloc(strlen(argv[i])+1);
+                    strcpy(ndat.newsrc, argv[i]);
+                    break;
+
                 default:
                     usage("Bad option.");
                 }
@@ -55,9 +74,6 @@ int main(int argc, char **argv)
                 group = argv[i];
             } else
                 group = NULL;
-
-        } else if(strcmp(argv[i], "list") == 0) {
-            command = list;
 
         } else if(strcmp(argv[i], "read") == 0) {
             command = read;
@@ -75,7 +91,9 @@ int main(int argc, char **argv)
         usage("No command specified.");
     }
 
-    server = getenv("NNTPSERVER");
+    if(server == NULL)
+        server = DEFNNTPSERVER;
+
     ndat.nh = nntp_connect(server);
     if(ndat.nh == NULL) {
         if(ndat.verbose >= 0)
@@ -86,11 +104,11 @@ int main(int argc, char **argv)
 
     switch(command) {
     case check:
-        ret = do_check(ndat, group);
+        ret = do_check(&ndat, group);
         break;
 
     case read:
-        ret = do_read(ndat, group, article);
+        ret = do_read(&ndat, group, article);
         break;
 
     default:
@@ -98,67 +116,97 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
+    if(ndat.newsrc) free(ndat.newsrc);
     nntp_disconnect(ndat.nh);
     exit((ret == 0)?EXIT_SUCCESS:EXIT_FAILURE);
 }
 
-int do_check(noose_t ndat, char *group)
+int setnewsrc(noose_t *ndat)
+{
+    char *home;
+    char *newsrcs[] = { "/.jnewsrc", "/.newsrc", NULL };
+    int i;
+    FILE *fp;
+
+    home = getenv("HOME");
+    if(home == NULL) {
+        fprintf(stderr, "%s: Please set HOME in your environment.\n",
+                PROGNAME);
+        return -1;
+    }
+    for(i = 0; newsrcs[i] != NULL; i++) {
+        ndat->newsrc = malloc(strlen(home)+strlen(newsrcs[i]));
+        strcpy(ndat->newsrc, home);
+        strcat(ndat->newsrc, newsrcs[i]);
+        if((fp = fopen(ndat->newsrc, "r")) != NULL) {
+            fclose(fp);
+            break;
+        }
+        free(ndat->newsrc);
+    }
+    if(newsrcs[i] == NULL) {
+        fprintf(stderr, "%s: Please specify a newsrc file to use.\n",
+                PROGNAME);
+        return -1;
+    }
+    return 0;
+}
+
+int do_check(noose_t *ndat, char *group)
 {
     int nsubbedgroups, i;
     char **subbedgroups;
-    char *newsrc;
 
-    newsrc = malloc(strlen(getenv("HOME"))+strlen("/.jnewsrc"));
-    strcpy(newsrc, getenv("HOME"));
-    strcat(newsrc, "/.jnewsrc");
+    if(ndat->newsrc == NULL)
+        if(setnewsrc(ndat) != 0) return -1;
 
     if(group == NULL) {
-        i = newsrc_getsubscribedgroups(newsrc, &nsubbedgroups, &subbedgroups);
+        i = newsrc_getsubscribedgroups(ndat->newsrc, &nsubbedgroups,
+                                       &subbedgroups);
         if(i != 0) {
-            if(ndat.verbose >= 0)
+            if(ndat->verbose >= 0)
                 fprintf(stderr, "%s: Couldn't read subscribed groups from "
                         "your newsrc.\n", PROGNAME);
             return -1;
         }
         for(i = 0; i < nsubbedgroups; i++) {
-            checksingle(ndat, newsrc, subbedgroups[i]);
+            checksingle(ndat, subbedgroups[i]);
             free(subbedgroups[i]);
         }
     } else {
-        checksingle(ndat, newsrc, group);
+        checksingle(ndat, group);
     }
 
-    free(newsrc);
     return 0;
 }
 
-int checksingle(noose_t ndat, char *newsrc, char *group)
+int checksingle(noose_t *ndat, char *group)
 {
     rangelist_t *rl, *p;
     int i, narticles;
 
     rl = rl_new(0, 0, NULL);
 
-    if(nntp_cmd_group(ndat.nh, group, NULL, &rl->begin, &rl->end) != 0) {
-        if(ndat.verbose >= 0)
+    if(nntp_cmd_group(ndat->nh, group, NULL, &rl->begin, &rl->end) != 0) {
+        if(ndat->verbose >= 0)
             fprintf(stderr, "%s: nntp_cmd_group failed.\n", PROGNAME);
         return -1;
     }
 
-    newsrc_filter(newsrc, group, &rl);
+    newsrc_filter(ndat->newsrc, group, &rl);
 
     narticles = 0;
     p = rl;
     while(p != NULL) {
         for(i = p->begin; i > 0 && i <= p->end; i++) {
-            if(nntp_cmd_article(ndat.nh, i, NULL, NULL) == 0) {
+            if(nntp_cmd_article(ndat->nh, i, NULL, NULL) == 0) {
                 narticles++;
             }
         }
         p = p->next;
     }
 
-    if(narticles > 0 || ndat.verbose > 0) {
+    if(narticles > 0 || ndat->verbose > 0) {
         printf("There %s %d unread article%s in newsgroup %s.\n",
                (narticles == 1)?"is":"are", narticles,
                (narticles == 1)?"":"s", group);
@@ -168,18 +216,18 @@ int checksingle(noose_t ndat, char *newsrc, char *group)
     return 0;
 }
 
-int do_read(noose_t ndat, char *group, int article)
+int do_read(noose_t *ndat, char *group, int article)
 {
     char *artbody, *arthead;
 
-    if(nntp_cmd_group(ndat.nh, group, NULL, NULL, NULL) == -1) {
-        if(ndat.verbose >= 0)
+    if(nntp_cmd_group(ndat->nh, group, NULL, NULL, NULL) == -1) {
+        if(ndat->verbose >= 0)
             fprintf(stderr, "%s: nntp_cmd_group failed.\n", PROGNAME);
         return -1;
     }
     
-    if(nntp_cmd_article(ndat.nh, article, &arthead, &artbody) == -1) {
-        if(ndat.verbose >= 0)
+    if(nntp_cmd_article(ndat->nh, article, &arthead, &artbody) == -1) {
+        if(ndat->verbose >= 0)
             fprintf(stderr, "%s: nntp_cmd_article failed.\n", PROGNAME);
         return -1;
     }
@@ -198,11 +246,12 @@ void usage(char *msg)
 "  -q                    Quiet mode. This makes `check' only report groups\n"
 "                        with more than zero new messages in them.\n"
 "  -v                    Verbose. The inverse of quiet.\n"
+"  -n server             Specify NNTP server.\n"
+"  -r rcfile             Specify newsrc file.\n"
 "\n"
 "Valid commands are:\n"
 "  check [g]             Return how many unread posts are in all subscribed\n"
 "                        groups, or just group g if specified.\n"
-"  list                  List the known groups on the server.\n"
 "  read <g> <n>          Grab the entirity of article n from group g.\n",
            PROGNAME);
     exit(EXIT_FAILURE);
