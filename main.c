@@ -16,6 +16,7 @@
 
 void usage(char *msg);
 void do_check(void *nh, char *group);
+void do_read(void *nh, char *group, int article);
 
 int main(int argc, char **argv)
 {
@@ -64,6 +65,10 @@ int main(int argc, char **argv)
         do_check(nh, group);
         break;
 
+    case read:
+        do_read(nh, group, article);
+        break;
+
     default:
         fprintf(stderr, "Command unsupported.\n");
         exit(EXIT_FAILURE);
@@ -107,6 +112,26 @@ void do_check(void *nh, char *group)
            (narticles == 1)?"":"s", group);
 
     rl_delete(rl);
+    return;
+}
+
+void do_read(void *nh, char *group, int article)
+{
+    char *artbody, *arthead;
+
+    if(nntp_cmd_group(nh, group, NULL, NULL, NULL) == -1) {
+        fprintf(stderr, "%s: nntp_cmd_group failed.\n", PROGNAME);
+        exit(EXIT_FAILURE);
+    }
+    
+    if(nntp_cmd_article(nh, article, &arthead, &artbody) == -1) {
+        fprintf(stderr, "%s: nntp_cmd_article failed.\n", PROGNAME);
+        exit(EXIT_FAILURE);
+    }
+
+    printf("%s%s", arthead, artbody);
+    free(arthead);
+    free(artbody);
     return;
 }
 
