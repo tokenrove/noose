@@ -105,6 +105,9 @@ int newsrc_getsubscribedgroups(char *rcfile, int *ngroups, char ***groups)
             fgets(buffer+strlen(buffer)-1, buflen-strlen(buffer)-1, fp);
         }
 
+        if(buffer[strlen(buffer)-1] == '\n')
+            buffer[strlen(buffer)-1] = 0;
+
         for(p = buffer; *p != ' ' && *p; p++);
         if(*(p-1) == ':') { /* subscribed */
             (*ngroups)++;
