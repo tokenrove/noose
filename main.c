@@ -143,6 +143,7 @@ int setnewsrc(noose_t *ndat)
             break;
         }
         free(ndat->newsrc);
+	ndat->newsrc = NULL;
     }
     if(newsrcs[i] == NULL) {
         fprintf(stderr, "%s: Please specify a newsrc file to use.\n",
